@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import logo from './logo.svg';
 import './App.css';
 import postsArray from './posts.json';
 import users from './users.json';
@@ -30,7 +29,6 @@ class Post extends Component {
       title,
       body,
       userId,
-      key,
       onDelete
     } = this.props;
 
@@ -63,7 +61,7 @@ class List extends Component {
       <div>
         {posts.map(post => (
           <Post
-            id={post.id}
+            key={post.id}
             userId={post.userId}
             title={post.title}
             body={post.body}
@@ -76,27 +74,36 @@ class List extends Component {
 }
 
 class Filter extends Component {
-  changeOption(type, e) {
-    var val = e.target.value;
+  changeOption(type, element) {
+    const val = element.target.value;
     this.props.changeOption(val, type);
   }
 
-/* ToDo: ES6 */
+  changeFilter(){
+    this.props.changeFilter();
+  }
+
   render() {
     return (
       <div>
         <label>City filter:
-          <select onChange={this.changeOption.bind(this, 'city')}>
-            {this.props.cityOptions.map(function(option) {
-              return ( <option key={option} value={option}>{option}</option> )
-            })}
+          <select
+            onChange={this.changeOption.bind(this, 'city')}
+            onClick={this.changeFilter.bind(this)}
+          >
+            {this.props.cityOptions.map((option, value) =>
+              ( <option key={value} value={option}>{option}</option> )
+            )}
           </select>
         </label>
         <label>Company filter:
-          <select onChange={this.changeOption.bind(this, 'company')}>
-            {this.props.companyOptions.map(function(option) {
-              return ( <option key={option} value={option}>{option}</option> )
-            })}
+          <select
+            onChange={this.changeOption.bind(this, 'company')}
+            onClick={this.changeFilter.bind(this)}
+          >
+            {this.props.companyOptions.map((option, value) =>
+              ( <option key={value} value={option}>{option}</option> )
+            )}
           </select>
         </label>
       </div>
@@ -110,6 +117,7 @@ class App extends Component {
 
     this.state = {
       posts: postsArray,
+      users: users,
       city: '',
       company: ''
     };
@@ -122,16 +130,20 @@ class App extends Component {
   }
 
   handleSearch(event) {
-
     const searchQuery = event.target.value.toLowerCase();
 
-    const displayedPosts = postsArray.filter(function(el) {
-        const searchValue = el.title.toLowerCase();
-      return searchValue.indexOf(searchQuery) !== -1;
-    });
+    const displayedPosts = postsArray.filter(el =>
+      el.title.toLowerCase().indexOf(searchQuery) !== -1
+    );
 
     this.setState({
       posts: displayedPosts
+    });
+  }
+
+  checked(event) {
+    this.setState({
+      multiple: event.target.value
     });
   }
 
@@ -139,7 +151,6 @@ class App extends Component {
     switch(type) {
       case 'city':
         this.setState({city: val});
-        console.info(this.state.city);
         break;
       case 'company':
         this.setState({company: val});
@@ -149,24 +160,45 @@ class App extends Component {
     }
   }
 
-  render() {
-    let filteredItems = this.state.posts;
+  filterPosts() {
 
+    let filteredItems = this.state.users;
     const state = this.state,
-          filterProperties = ["city", "company"];
+          filterProperties = ['city', 'company'];
 
     filterProperties.forEach(function(filterBy) {
       const filterValue = state[filterBy];
+
       if (filterValue) {
-        filteredItems = filteredItems.filter(function(item) {
-          return item[filterBy] === filterValue;
-        });
+        filteredItems = filteredItems.filter(element =>
+          filterBy === 'city' ?
+          element.address[filterBy] === filterValue :
+          element[filterBy].name === filterValue
+        )
       }
     });
 
-    /* ToDo: ES6*/
+
+    let showPosts;
+
+    for (let i = 0; i < filteredItems.length; i++) {
+      showPosts = this.state.posts.filter(item =>
+        item.userId === filteredItems[i].id
+      )
+
+      showPosts = [...new Set([...showPosts])];
+    }
+
+    this.setState({
+      posts: showPosts
+    });
+
+  }
+
+  render() {
     const cityArray = users.map(item => item.address.city),
-          companyArray = users.map(item => item.company.name);
+          companyArray = users.map(item => item.company.name),
+          idArray = users.map(item => item.id);
 
     cityArray.unshift('');
     companyArray.unshift('');
@@ -178,7 +210,9 @@ class App extends Component {
           <Filter
             cityOptions={cityArray}
             companyOptions={companyArray}
+            key={idArray}
             changeOption={this.filterItems.bind(this)}
+            changeFilter={this.filterPosts.bind(this)}
           />
           <label>Quick search by post title <input type="text" onChange={this.handleSearch.bind(this)}/></label>
           <hr/>
